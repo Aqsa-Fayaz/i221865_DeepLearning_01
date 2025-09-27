@@ -1,6 +1,6 @@
 # i221865_DeepLearning_01
 
-. Network Details and Training Configuration
+1. Network Details and Training Configuration
 Model Architectures and Rationale
 The project implemented a multi-task CNN to simultaneously predict Expression (8-class classification) and continuous Valence/Arousal values (regression). Two backbones were compared:
 
