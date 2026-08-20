@@ -1,53 +1,79 @@
-Here is a concise, complete summary for your GitHub repository's README.md file, covering all the essential project components and submission requirements.
+# Multi-Task Affect Recognition: ResNet50 vs EfficientNetB0
 
-Multi-Task Affect Recognition: ResNet50 vs. EfficientNetB0 (CS452-A1)
-Project Overview
-This repository contains the solution for Assignment 1 (CS452), a comparative study on Multi-Task Affect Recognition. The goal was to train deep Convolutional Neural Networks (CNNs) to simultaneously predict two affective tasks from facial images:
+A comparative study of two CNN backbones on multi-task facial affect recognition — simultaneously predicting **categorical expression** (8 classes) and **continuous valence/arousal** (regression) from a single face image.
 
-Categorical Emotion Expression (Classification: 8 classes).
+## Overview
 
-Continuous Valence and Arousal (Regression: values in the range [−1,1]).
+Most emotion recognition models treat expression classification and valence/arousal estimation as separate problems. This project trains a single multi-task network to predict both at once, then compares two popular pretrained backbones — **ResNet50** and **EfficientNetB0** — to see which transfers better to this task under identical training conditions.
 
-The study compares the performance, efficiency, and generalization ability of two popular backbones, ResNet50 and EfficientNetB0, using a modular, function-based implementation.
+## Problem setup
 
-Key Deliverables
-1. Code & Models
-File	Description
-main.ipynb	The primary Jupyter Notebook containing the full pipeline: environment setup, custom CCC metric implementation, data generators, modular model building functions, two-phase transfer learning for both architectures, and the final comparative analysis.
-EfficientNet_FINAL_best.keras	The final saved weights for the EfficientNetB0 multi-task model.
-ResNet50_FINAL_best.keras	(Include this if you saved the ResNet model). The final saved weights for the ResNet50 multi-task model.
-[Dataset Files: e.g., 0_aro.npy]	Necessary .npy files for loading annotations or features.
-2. Final Report
-The detailed results, discussion, and analysis are contained in the submitted PDF file: <your FastID> <your name> A1-CS452.pdf.
+- **Task 1 — Expression classification**: 8-way softmax over discrete emotion categories
+- **Task 2 — Valence regression**: continuous score in [-1, +1]
+- **Task 3 — Arousal regression**: continuous score in [-1, +1]
+- Samples with invalid valence/arousal labels (`-2`, marking "uncertain" or "no face detected") are filtered out before training so the regression heads only see valid targets
 
-Methodology & Results
-1. Architecture & Training
-Models Compared: ResNet50 (Baseline) and EfficientNetB0 (Modern SOTA).
+## Architecture
 
-Transfer Learning: Two-phase approach using ImageNet pre-trained weights (Feature Extraction with frozen backbone, followed by Ultra-Fine-Tuning with LR=1e−6).
+Both backbones share the same head design so the comparison isolates the effect of the backbone itself:
 
-Key Metrics: Performance was primarily evaluated using Expression Accuracy and the Concordance Correlation Coefficient (CCC) for Valence and Arousal, as CCC is the gold standard for continuous affect agreement.
+1. **Backbone** (ImageNet-pretrained, frozen for transfer learning) — ResNet50 or EfficientNetB0
+2. **Global average pooling** over the backbone's feature maps
+3. **Three parallel heads** branching from the pooled features:
+   - Expression head → dense + softmax (8 classes)
+   - Valence head → dense + linear (regression)
+   - Arousal head → dense + linear (regression)
 
-2. Final Comparison
-(Note: This section uses the plausible final values from the report to summarize the outcome.)
+The model is trained with a combined loss (categorical cross-entropy for expression, MSE for valence/arousal) and evaluated per-task.
 
-The EfficientNetB0 model was the winner, demonstrating better efficiency (fewer parameters) and superior overall performance on validation metrics:
+## Custom metrics
 
-Metric	EfficientNetB0 (Winner)	ResNet50
-Overall Score	0.5700	0.5580
-Expression Accuracy	58.00%	55.00%
-Arousal CCC	0.4000	0.3500
-3. Modular Implementation
-The entire pipeline strictly adheres to best practices by using modular functions for data preparation, model construction, metric calculation, and visualization, making the code clean, understandable, and easily reproducible (as advocated by the Keras Idiomatic Programmer Handbook).
+Standard accuracy isn't enough for the regression tasks, so this project implements:
 
-How to Run the Code
-Clone the repository.
+- **CCC (Concordance Correlation Coefficient)** — measures agreement between predicted and true valence/arousal, not just correlation. Standard for affective computing benchmarks (e.g. AffectNet, AffWild).
+- **SAGR (Sign Agreement)** — measures how often the predicted sign (positive/negative) matches the true sign.
+- Standard classification metrics (accuracy, F1, Cohen's kappa) for the expression head.
 
-Install dependencies:
+## Results
 
-Bash
+| Model | Expression Acc. | Valence CCC | Arousal CCC | Valence MSE | Arousal MSE |
+|---|---|---|---|---|---|
+| ResNet50 | _fill in_ | _fill in_ | _fill in_ | _fill in_ | _fill in_ |
+| EfficientNetB0 | _fill in_ | _fill in_ | _fill in_ | _fill in_ | _fill in_ |
 
-pip install tensorflow numpy pandas tabulate
-Open main.ipynb in Jupyter Notebook or VS Code.
+> Fill this in with your final numbers from `calculate_metrics_final()` — this table is the first thing recruiters look at, so it's worth getting right.
 
-Run all cells sequentially. The notebook will automatically load the models, perform the final metric calculation, and output the comparison table.
+## Tech stack
+
+- TensorFlow / Keras
+- ResNet50, EfficientNetB0 (`tf.keras.applications`)
+- scikit-learn (metrics)
+- NumPy, Pandas
+
+## Project structure
+
+```
+.
+├── notebooks/
+│   └── multitask_affect_recognition.ipynb   # full training + evaluation pipeline
+├── README.md
+└── requirements.txt
+```
+
+## Running it
+
+```bash
+pip install -r requirements.txt
+jupyter notebook notebooks/multitask_affect_recognition.ipynb
+```
+
+Update `DATA_DIR` in the config cell to point to your dataset (expects an `images/` folder of face crops and an `annotations/` folder with matching valence/arousal/expression labels).
+
+## Dataset
+
+Trained on a facial affect dataset with per-image expression labels and continuous valence/arousal annotations (AffectNet-style format). Dataset not included in this repo — see the notebook's data loading section for the expected folder structure.
+
+## Notes
+
+- Backbones are frozen (transfer learning) rather than fine-tuned end-to-end, keeping the comparison focused on feature quality out of the box.
+- This was originally coursework (semester 7 deep learning assignment); cleaned up here as a standalone comparative study.
